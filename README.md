@@ -1,6 +1,6 @@
 # How to run
 
-First install [love2d](https://love2d.org/#download){:target="_blank"}
+First install <a href="https://love2d.org/#download" target="_blank">love2d</a>
 
 then in the project directory
 
