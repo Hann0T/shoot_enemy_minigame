@@ -3,6 +3,11 @@ local player
 local game_window
 local bullet_image
 local current_bullet = nil
+local bullet_pool = {
+    player = nil,
+    bullets = nil,
+    sprite = nil
+}
 
 local function check_collision(a, b)
     local a_right = a.x + a.width
@@ -50,19 +55,49 @@ function get_window()
     }
 end
 
-function create_bullet(image, player)
+function bullet_pool_init(bullet_pool, player)
+    for i = 1, 10, 1 do
+        table.insert(
+            bullet_pool.bullets,
+            create_bullet(bullet_pool.sprite, player.x + (player.width / 2), player.y, player.speed)
+        )
+    end
+    bullet_pool.player = player
+end
+
+function bullet_pool_shot_bullet(bullet_pool)
+    for i, bullet in ipairs(bullet_pool.pool) do
+        if not bullet.shot then
+            bullet.shot = true
+            return bullet
+        end
+    end
+
+    local player = bullet_pool.player
+    local new_bullet = create_bullet(bullet_pool.sprite, player.x + (player.width / 2), player.y, player.speed)
+
+    table.insert(new_bullet.pool, new_bullet)
+end
+
+function create_bullet(sprite, x, y, speed)
     return {
-        x = player.x + (player.width / 2),
-        y = player.y,
-        width = image:getWidth(),
-        height = image:getHeight(),
-        speed = player.speed,
-        sprite = image,
+        x = x,
+        y = y,
+        width = sprite:getWidth(),
+        height = sprite:getHeight(),
+        speed = speed,
+        sprite = sprite,
+        shot = false,
     }
 end
 
-function destroy_bullet()
-    current_bullet = nil
+function update_bullet_position(bullet, x, y)
+    bullet.x = x
+    bullet.y = y
+end
+
+function destroy_bullet(bullet)
+    bullet.shot = false
 end
 
 function love.load()
@@ -76,6 +111,7 @@ function love.load()
     enemy = create_player(snake)
     set_enemy(enemy)
     set_player(player)
+    bullet_pool = bullet_pool_init(bullet_image, player)
 end
 
 function love.draw()
@@ -122,6 +158,6 @@ end
 
 function love.keyreleased(key)
     if key == "space" then
-        current_bullet = create_bullet(bullet_image, player)
+        bullet_pool_shot_bullet(bullet_pool)
     end
 end
