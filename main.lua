@@ -2,12 +2,25 @@ local enemy
 local player
 local game_window
 local bullet_image
-local current_bullet = nil
-local bullet_pool = {
-    player = nil,
-    bullets = nil,
-    sprite = nil
-}
+local bullet_pool = {}
+
+function bullet_pool.get_bullet(self)
+    for i, bullet in ipairs(self) do
+        if not bullet.shot then
+            return bullet
+        end
+    end
+
+    bullet_pool:init(bullet_image, player)
+
+    return bullet_pool:get_bullet()
+end
+
+function bullet_pool.init(self, image, player)
+    for i = 1, 5, 1 do
+        table.insert(self, create_bullet(image, player))
+    end
+end
 
 local function check_collision(a, b)
     local a_right = a.x + a.width
@@ -79,25 +92,16 @@ function bullet_pool_shot_bullet(bullet_pool)
     table.insert(new_bullet.pool, new_bullet)
 end
 
-function create_bullet(sprite, x, y, speed)
+function create_bullet(image, x, y, speed)
     return {
-        x = x,
-        y = y,
-        width = sprite:getWidth(),
-        height = sprite:getHeight(),
-        speed = speed,
-        sprite = sprite,
-        shot = false,
+        x = player.x + (player.width / 2),
+        y = player.y,
+        width = image:getWidth(),
+        height = image:getHeight(),
+        speed = player.speed,
+        sprite = image,
+        shot = false
     }
-end
-
-function update_bullet_position(bullet, x, y)
-    bullet.x = x
-    bullet.y = y
-end
-
-function destroy_bullet(bullet)
-    bullet.shot = false
 end
 
 function love.load()
@@ -111,16 +115,20 @@ function love.load()
     enemy = create_player(snake)
     set_enemy(enemy)
     set_player(player)
-    bullet_pool = bullet_pool_init(bullet_image, player)
+    bullet_pool:init(bullet_image, player)
 end
 
 function love.draw()
-    if current_bullet then
-        love.graphics.draw(current_bullet.sprite, current_bullet.x, current_bullet.y)
+    for i, bullet in ipairs(bullet_pool) do
+        if bullet.shot then
+            love.graphics.draw(bullet.sprite, bullet.x, bullet.y)
+        end
     end
 
     love.graphics.draw(player.sprite, player.x, player.y)
     love.graphics.draw(enemy.sprite, enemy.x, enemy.y)
+
+    love.graphics.print("bullets: " .. #bullet_pool, 10, 10)
 end
 
 function love.update(dt)
@@ -143,21 +151,27 @@ function love.update(dt)
         enemy.direction = "left"
     end
 
-    if current_bullet then
-        current_bullet.y = current_bullet.y + current_bullet.speed * dt
-        if current_bullet.y >= game_window.height then
-            destroy_bullet()
-        end
+    for i, bullet in ipairs(bullet_pool) do
+        if bullet.shot then
+            bullet.y = bullet.y + bullet.speed * dt
 
-        if check_collision(current_bullet, enemy) then
-            enemy.speed = enemy.speed + 10
-            destroy_bullet()
+            if check_collision(bullet, enemy) then
+                enemy.speed = enemy.speed + 5000 * dt
+                bullet.shot = false
+            end
+
+            if bullet.y >= love.graphics.getHeight() then
+                bullet.shot = false
+            end
         end
     end
 end
 
 function love.keyreleased(key)
     if key == "space" then
-        bullet_pool_shot_bullet(bullet_pool)
+        local bullet = bullet_pool:get_bullet()
+        bullet.shot = true
+        bullet.x = player.x + (player.width / 2)
+        bullet.y = player.y
     end
 end
